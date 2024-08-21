@@ -2,6 +2,8 @@ const { Telegraf, Markup, Scenes, session } = require("telegraf");
 require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+// eslint-disable-next-line no-unused-vars
+const port = process.env.PORT || 4000;
 
 const sendDataToSpecificChat = async (chatId, message) => {
     try {
