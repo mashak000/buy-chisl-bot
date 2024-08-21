@@ -158,4 +158,13 @@ bot.on("successful_payment", async (ctx) => {
     delete ctx.session.deliveryData;
   });
 
-bot.launch();
+  if (process.env.WEBHOOK_URL) {
+    bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`);
+    bot.startWebhook(`/bot${process.env.BOT_TOKEN}`, null, process.env.PORT || 4000);
+  } else {
+    bot.launch();
+  }
+  
+  // Enable graceful stop
+  process.once("SIGINT", () => bot.stop("SIGINT"));
+  process.once("SIGTERM", () => bot.stop("SIGTERM"));
