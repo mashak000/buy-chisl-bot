@@ -174,6 +174,10 @@ if (process.env.WEBHOOK_URL) {
   bot.launch();
 }
 
+bot.telegram.getWebhookInfo().then((info) => {
+  console.log(info);
+});
+
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
