@@ -3,15 +3,15 @@ require("dotenv").config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 // eslint-disable-next-line no-unused-vars
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 10000;
 
 const sendDataToSpecificChat = async (chatId, message) => {
-    try {
-      await bot.telegram.sendMessage(chatId, message);
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
-  };
+  try {
+    await bot.telegram.sendMessage(chatId, message);
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};
 
 const deliveryOptions = {
   courier: {
@@ -50,7 +50,7 @@ bot.use(Telegraf.log());
 
 const valueStep = (ctx) => {
   ctx.reply("Введите сумму доната (только число, не менее 500)");
-  ctx.wizard.next()
+  ctx.wizard.next();
 };
 const paymentStep = (ctx) => {
   const usersAmount = parseInt(ctx.message.text, 10);
@@ -58,7 +58,8 @@ const paymentStep = (ctx) => {
   if (isNaN(usersAmount) || usersAmount < 499) {
     ctx.reply("Пожалуйста, введите сумму не менее 500");
   } else {
-    const totalAmount = deliveryOptions[ctx.session.delivery].price + usersAmount
+    const totalAmount =
+      deliveryOptions[ctx.session.delivery].price + usersAmount;
     ctx.replyWithInvoice(getInvoice(ctx.from.id, totalAmount));
     ctx.scene.leave();
   }
@@ -96,8 +97,10 @@ _Это бот распродажи Численничков 2023 за дона�
 });
 
 bot.help((ctx) => {
-  ctx.reply('Если вам не удалось оформить заказ, попробуйте очистить историию диалога и заполнить информацию заново. Если и это не помогло, напишите, пожалуйста, @mashak000')
-})
+  ctx.reply(
+    "Если вам не удалось оформить заказ, попробуйте очистить историию диалога и заполнить информацию заново. Если и это не помогло, напишите, пожалуйста, @mashak000"
+  );
+});
 
 bot.action("buy", (ctx) => {
   ctx.reply(
@@ -130,9 +133,9 @@ bot.action("pickup", (ctx) => {
 });
 
 bot.on("text", async (ctx) => {
-  if (ctx.session.delivery !== 'pickup') {
+  if (ctx.session.delivery !== "pickup") {
     ctx.session.deliveryData = ctx.message.text;
-    ctx.reply("Спасибо мы сохранили информацию о достаке").then(async() => {
+    ctx.reply("Спасибо мы сохранили информацию о достаке").then(async () => {
       if (ctx.session.deliveryData) {
         ctx.scene.enter("userWizard");
       }
@@ -140,31 +143,37 @@ bot.on("text", async (ctx) => {
   }
 });
 
-bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true)); 
+bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
 
 bot.on("successful_payment", async (ctx) => {
-    await ctx.reply("Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами");
-    let deliveryData;
-    if(ctx.session.deliveryData){
-      deliveryData = ctx.session.deliveryData
-    } else {
-      deliveryData = 'Выбран самовывоз'
-    }
-    const username = ctx.from.username
-    // const paymentData = `Invoice ID: ${ctx.update.message.successful_payment}`;
-    const combinedData = `Девачки, пришел новый заказ💅💅💅\n Информация по достаке: ${deliveryData}\nПользователь: @${username}`;
-    await sendDataToSpecificChat(process.env.CHAT_ID, combinedData);
-    delete ctx.session.delivery;
-    delete ctx.session.deliveryData;
-  });
-
-  if (process.env.WEBHOOK_URL) {
-    bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`);
-    bot.startWebhook(`/bot${process.env.BOT_TOKEN}`, null, process.env.PORT || 4000);
+  await ctx.reply("Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами");
+  let deliveryData;
+  if (ctx.session.deliveryData) {
+    deliveryData = ctx.session.deliveryData;
   } else {
-    bot.launch();
+    deliveryData = "Выбран самовывоз";
   }
-  
-  // Enable graceful stop
-  process.once("SIGINT", () => bot.stop("SIGINT"));
-  process.once("SIGTERM", () => bot.stop("SIGTERM"));
+  const username = ctx.from.username;
+  // const paymentData = `Invoice ID: ${ctx.update.message.successful_payment}`;
+  const combinedData = `Девачки, пришел новый заказ💅💅💅\n Информация по достаке: ${deliveryData}\nПользователь: @${username}`;
+  await sendDataToSpecificChat(process.env.CHAT_ID, combinedData);
+  delete ctx.session.delivery;
+  delete ctx.session.deliveryData;
+});
+
+if (process.env.WEBHOOK_URL) {
+  bot.telegram.setWebhook(
+    `${process.env.WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`
+  );
+  bot.startWebhook(
+    `/bot${process.env.BOT_TOKEN}`,
+    null,
+    process.env.PORT || 10000
+  );
+} else {
+  bot.launch();
+}
+
+// Enable graceful stop
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
