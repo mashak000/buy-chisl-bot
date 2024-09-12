@@ -161,22 +161,24 @@ bot.on("successful_payment", async (ctx) => {
   delete ctx.session.deliveryData;
 });
 
-if (process.env.WEBHOOK_URL) {
-  bot.telegram.setWebhook(
-    `${process.env.WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`
-  );
-  bot.startWebhook(
-    `/bot${process.env.BOT_TOKEN}`,
-    null,
-    process.env.PORT || 10000
-  );
-} else {
-  bot.launch();
-}
+// if (process.env.WEBHOOK_URL) {
+//   bot.telegram.setWebhook(
+//     `${process.env.WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`
+//   );
+//   bot.startWebhook(
+//     `/bot${process.env.BOT_TOKEN}`,
+//     null,
+//     process.env.PORT || 10000
+//   );
+// } else {
+//   bot.launch();
+// }
 
-bot.telegram.getWebhookInfo().then((info) => {
-  console.log(info);
-});
+// bot.telegram.getWebhookInfo().then((info) => {
+//   console.log(info);
+// });
+
+bot.launch();
 
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
