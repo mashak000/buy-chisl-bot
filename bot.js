@@ -8,13 +8,13 @@ const { authorize } = require("./auth");
 
 const bot = new Bot(process.env.BOT_TOKEN);
 
-const auth = authorize();
-const drive = google.drive({ version: "v3", auth });
-const sheets = google.sheets({ version: "v4", auth });
+// const auth = authorize();
+// const drive = google.drive({ version: "v3", auth });
+// const sheets = google.sheets({ version: "v4", auth });
 
 const deliveryOptions = {
   courier: {
-    price: 0,
+    price: 500,
     description: "Delivery by courier",
   },
   post: {
@@ -41,13 +41,19 @@ const getInvoice = (id, usersAmount) => {
   return JSON.parse(JSON.stringify(invoice));
 };
 
+const amountStep = (ctx) => {
+  ctx.reply("Введите количество календарей");
+  ctx.session.step = "amount"; 
+}
+
 const valueStep = (ctx) => {
+  ctx.session.amount = ctx.message.text; 
   ctx.reply("Введите сумму доната (только число, не менее 500)");
   ctx.session.step = "payment";
 };
 
 const paymentStep = async (ctx) => {
-  const usersAmount = parseInt(ctx.msg.text, 10);
+  const usersAmount = parseInt(ctx.msg.text, 10) * parseInt(ctx.session.amount);
 
   if (isNaN(usersAmount) || usersAmount < 100) {
     await ctx.reply("Пожалуйста, введите сумму не менее 500");
@@ -91,41 +97,41 @@ bot.use(
 );
 
 // загружает на Google Drive
-async function uploadFile(filePath, fileName) {
-  try {
-    const fileMetadata = {
-      name: fileName,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
-    };
-    const media = {
-      mimeType: "application/octet-stream",
-      body: fs.createReadStream(filePath),
-    };
-    const response = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: "id",
-    });
-    console.log("File uploaded to Google Drive, ID:", response.data.id);
-    return response.data.id;
-  } catch (error) {
-    console.error("Error uploading file to Google Drive:", error);
-    throw new Error("Failed to upload file to Google Drive");
-  }
-}
+//  async function uploadFile(filePath, fileName) {
+//   try {
+//     const fileMetadata = {
+//       name: fileName,
+//       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
+//     };
+//     const media = {
+//       mimeType: "application/octet-stream",
+//       body: fs.createReadStream(filePath),
+//     };
+//     const response = await drive.files.create({
+//       resource: fileMetadata,
+//       media: media,
+//       fields: "id",
+//     });
+//     console.log("File uploaded to Google Drive, ID:", response.data.id);
+//     return response.data.id;
+//   } catch (error) {
+//     console.error("Error uploading file to Google Drive:", error);
+//     throw new Error("Failed to upload file to Google Drive");
+//   }
+// } 
 
 // добавляет строку в гугл таблицу
-async function appendToSheet(sheetId, values) {
-  const resource = {
-    values: [values],
-  };
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: sheetId,
-    range: "aplication!A1",
-    valueInputOption: "RAW",
-    resource: resource,
-  });
-}
+// async function appendToSheet(sheetId, values) {
+//   const resource = {
+//     values: [values],
+//   };
+//   await sheets.spreadsheets.values.append({
+//     spreadsheetId: sheetId,
+//     range: "aplication!A1",
+//     valueInputOption: "RAW",
+//     resource: resource,
+//   });
+// }
 
 bot.command("start", async (ctx) => {
   const markdownMessage = `
@@ -191,17 +197,19 @@ bot.callbackQuery("post", async (ctx) => {
 
 bot.callbackQuery("pickup", async (ctx) => {
   ctx.session.delivery = "pickup";
-  valueStep(ctx);
+  amountStep(ctx);
 });
 
 bot.on("message:text", async (ctx) => {
   if (ctx.session.step === "payment") {
     await paymentStep(ctx);
+  } else if (ctx.session.step === "amount") {
+    valueStep(ctx)
   } else if (ctx.session.delivery !== "pickup") {
     ctx.session.deliveryData = ctx.msg.text;
     await ctx.reply("Спасибо, мы сохранили информацию о доставке");
-    valueStep(ctx);
-  }
+    amountStep(ctx);
+  } 
 });
 
 bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
