@@ -133,6 +133,10 @@ bot.use(
 //   });
 // }
 
+bot.command("help", async (ctx) => {
+  ctx.reply("Если у вас возникли трудности с оформлением покупки, попробуйте очистить историю диалога и заполнить информацию еще раз, если и это не помогло, напишите @mashak000")
+})
+
 bot.command("start", async (ctx) => {
   const markdownMessage = `
 *Привет, ${ctx.from.first_name}\\!*
