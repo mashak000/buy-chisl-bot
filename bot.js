@@ -356,7 +356,8 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
       session.step = "finalStep";
       ctx.reply("Готово! Спасибо за заявку, ответим в первой неделе ноября");
     } catch (error) {
-      console.error(`Failed to upload sheet`, error);
+      // console.error(`Failed to upload sheet`, error);
+      console.error(`Failed to upload sheet`);
     }
     session.step = "finalStep";
   } else {
