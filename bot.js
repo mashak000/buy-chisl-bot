@@ -320,25 +320,9 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
   ctx.reply("💽 сохраняем информацию, это может занять какое-то время");
   if (session.formData.files && session.formData.files.length > 0) {
     try {
-      const fileLinks = [];
       const newFolderId = await uploadFilesToNewFolder(session.formData.name, session.formData.files)
       for (const file of session.formData.files) {
         try {
-          // // Upload the file to Google Drive
-          // const driveFileId = await uploadFile(file.filePath, file.fileName);
-          // console.log(
-          //   `Uploaded file ${file.fileName} to Google Drive with ID: ${driveFileId}`
-          // );
-
-          // const shareableLink = await getShareableLink(driveFileId);
-          // console.log(
-          //   `Shareable link for file ${file.fileName}: ${shareableLink}`
-          // );
-
-          // // Store the file link with a clickable name
-          // fileLinks.push(`=HYPERLINK("${shareableLink}")`);
-
-          // // Delete the file from the local folder after successful upload
           fs.unlink(file.filePath, (err) => {
             if (err) {
               console.error(`Error deleting file ${file.filePath}:`, err);
@@ -365,9 +349,7 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
         } else if (key !== "files") {
           values.push(session.formData[key]);
         } else {
-          // const fileNames = session.formData[key].map((file) => file.fileName);
           values.push(`=HYPERLINK("${shareableLink}")`);
-          // values.push(fileNames.join(", "));
         }
       }
       await appendToSheet(values);
