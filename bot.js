@@ -289,11 +289,11 @@ bot.callbackQuery("start_apply", (ctx) => {
 });
 
 // создает ссылку для файла на гугл диске
-async function getShareableFolderLink(folderId) {
+async function getShareableFolderLink(fileId) {
   try {
     // First, create permission to make the folder shareable
     await drive.permissions.create({
-      fileId: folderId,
+      fileId: fileId,
       requestBody: {
         role: "reader",
         type: "anyone",
@@ -302,7 +302,7 @@ async function getShareableFolderLink(folderId) {
 
     // Fetch the folder metadata to get the webViewLink
     const folder = await drive.files.get({
-      fileId: folderId,
+      fileId: fileId,
       fields: "webViewLink",
     });
 
