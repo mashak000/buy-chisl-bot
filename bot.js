@@ -308,7 +308,7 @@ async function getShareableFolderLink(fileId) {
 
     return folder.data.webViewLink;
   } catch (error) {
-    console.error("Error generating shareable folder link:", error);
+    console.error("Error generating shareable folder link:");
     throw error;
   }
 }
