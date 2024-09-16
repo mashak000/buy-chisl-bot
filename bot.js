@@ -18,7 +18,7 @@ const deliveryOptions = {
     description: "Delivery by courier",
   },
   post: {
-    price: 300,
+    price: 400,
     description: "Russian Post",
   },
   pickup: {
@@ -47,7 +47,6 @@ const amountStep = (ctx) => {
 };
 
 const valueStep = (ctx) => {
-  ctx.session.amount = ctx.message.text;
   ctx.reply("Введите сумму доната (только число, не менее 500)");
   ctx.session.step = "payment";
 };
@@ -214,16 +213,11 @@ bot.command("start", async (ctx) => {
 
 // логика покупки
 bot.callbackQuery("buy", async (ctx) => {
-  const keyboard = new InlineKeyboard()
-    .text("Курьером (по Москве) — 500р.", "curier")
-    .row()
-    .text("Почта России — 400р.", "post")
-    .row()
-    .text("Самовывоз (метро ул. 1905 года)", "pickup");
-
-  await ctx.reply("Выберите способ доставки👇", {
-    reply_markup: keyboard,
-  });
+  await ctx.api.sendMediaGroup(ctx.chat.id, [
+    { type: "photo", media: "https://i.imgur.com/98k1Iyn.png" },
+    { type: "photo", media: "https://i.imgur.com/KeWiOat.png" },
+  ]);
+  amountStep(ctx);
 });
 
 bot.callbackQuery("curier", async (ctx) => {
@@ -269,21 +263,30 @@ bot.on("message:successful_payment", async (ctx) => {
 });
 
 // логика по опен коллу
-bot.callbackQuery("apply", (ctx) => {
+bot.callbackQuery("apply", async (ctx) => {
   ctx.answerCallbackQuery();
 
   ctx.session.step = "curatorText";
+
   const keyboard = new InlineKeyboard()
     .text("Условия участия", "rules")
     .row()
     .text("Заполнить заявку", "start_apply");
 
-  ctx.reply(
-    "«Если интернет отключат завтра, что вы возьмете с собой?» кураторский текст",
-    {
-      reply_markup: keyboard,
-    }
-  );
+  try {
+    await ctx.api.sendMediaGroup(ctx.chat.id, [
+      { type: "photo", media: "https://i.imgur.com/erQv8oR.png" },
+      { type: "photo", media: "https://i.imgur.com/6ugNwXE.png" },
+    ]);
+    ctx.reply(
+      "«Если интернет отключат завтра, что вы возьмете с собой?» кураторский текст",
+      {
+        reply_markup: keyboard,
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("start_apply", (ctx) => {
@@ -427,7 +430,7 @@ bot.callbackQuery("confirmSubmission", async (ctx) => {
     const keyboard = new InlineKeyboard()
       .text("Редактировать", "edit")
       .text("Сохранить и отправить", "saveAndSend");
-    const allInfo = `Имя: ${session.formData.name}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\n Нажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
+    const allInfo = `Имя: ${session.formData.name}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\nНажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
     ctx.reply(allInfo, {
       reply_markup: keyboard,
     });
@@ -444,11 +447,21 @@ bot.on("message", async (ctx) => {
   if (session.step === "payment") {
     await paymentStep(ctx);
   } else if (session.step === "amount") {
-    valueStep(ctx);
+    ctx.session.amount = ctx.message.text;
+    const keyboard = new InlineKeyboard()
+      .text("Курьером (по Москве) — 500р.", "curier")
+      .row()
+      .text("Почта России — 400р.", "post")
+      .row()
+      .text("Самовывоз (метро ул. 1905 года)", "pickup");
+
+    await ctx.reply("Выберите способ доставки👇", {
+      reply_markup: keyboard,
+    });
   } else if (session.step === "delivery") {
     session.deliveryData = ctx.msg.text;
     await ctx.reply("Спасибо, мы сохранили информацию о доставке");
-    amountStep(ctx);
+    valueStep(ctx);
   }
 
   //logic for open call
@@ -472,9 +485,7 @@ bot.on("message", async (ctx) => {
   } else if (session.step === "collectDescription") {
     session.formData.description = ctx.message.text;
     if (!session.formData.files) {
-      ctx.reply(
-        "Отправьте до 10 файлов с вашей работой."
-      );
+      ctx.reply("Отправьте до 10 файлов с вашей работой.");
       session.step = "collectFile";
     } else {
       showEditMenu(ctx);
@@ -536,16 +547,18 @@ bot.on("message", async (ctx) => {
     // Set a timeout to detect when no more files are arriving
     session.mediaGroupTimeout = setTimeout(async () => {
       ctx.reply(
-        `Вы загрузили ${
-          session.formData.files.length
-        } файла. Вы можете отправить еще ${
-          10 - session.formData.files.length
-        }.`,
+        `Вы загрузили ${session.formData.files.length} файл${
+          parseInt(session.formData.files.length) === 1
+            ? ""
+            : [2, 3, 4].includes(parseInt(session.formData.files.length))
+            ? "a"
+            : "ов"
+        }. Вы можете отправить еще ${10 - session.formData.files.length}.`,
         {
           reply_markup: keyboard,
         }
       );
-      session.mediaGroupTimeout = null; 
+      session.mediaGroupTimeout = null;
     }, 1000);
   }
 
