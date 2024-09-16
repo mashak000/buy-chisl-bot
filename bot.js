@@ -101,18 +101,18 @@ async function createFolder(folderName) {
   try {
     const fileMetadata = {
       name: folderName,
-      mimeType: 'application/vnd.google-apps.folder',
+      mimeType: "application/vnd.google-apps.folder",
       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID], // ID родительской папки
     };
     const response = await drive.files.create({
       resource: fileMetadata,
-      fields: 'id',
+      fields: "id",
     });
-    console.log('Folder created on Google Drive, ID:', response.data.id);
+    console.log("Folder created on Google Drive, ID:", response.data.id);
     return response.data.id; // Возвращаем ID созданной папки
   } catch (error) {
-    console.error('Error creating folder on Google Drive:', error);
-    throw new Error('Failed to create folder on Google Drive');
+    console.error("Error creating folder on Google Drive:", error);
+    throw new Error("Failed to create folder on Google Drive");
   }
 }
 
@@ -145,19 +145,18 @@ async function uploadFilesToNewFolder(folderName, files) {
   try {
     // Создаем новую папку внутри существующей
     const newFolderId = await createFolder(folderName);
-    
+
     // Загружаем файлы в новую папку
     for (const file of files) {
       await uploadFile(file.filePath, file.fileName, newFolderId);
     }
-    
-    console.log('All files uploaded successfully.');
+
+    console.log("All files uploaded successfully.");
     return newFolderId;
   } catch (error) {
-    console.error('Error in uploading files to new folder:', error);
+    console.error("Error in uploading files to new folder:");
   }
 }
-
 
 // добавляет строку в гугл таблицу
 async function appendToSheet(values) {
@@ -216,8 +215,9 @@ bot.command("start", async (ctx) => {
 // логика покупки
 bot.callbackQuery("buy", async (ctx) => {
   const keyboard = new InlineKeyboard()
-    .text("Курьером (по Москве)", "curier")
-    .text("Почта России", "post")
+    .text("Курьером (по Москве) — 500р.", "curier")
+    .row()
+    .text("Почта России — 400р.", "post")
     .row()
     .text("Самовывоз (метро ул. 1905 года)", "pickup");
 
@@ -250,7 +250,12 @@ bot.callbackQuery("pickup", async (ctx) => {
 bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
 
 bot.on("message:successful_payment", async (ctx) => {
-  await ctx.reply("Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами");
+  const keyboard = new InlineKeyboard()
+    .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
+    .text("Опен колл", "apply");
+  await ctx.reply("Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами", {
+    reply_markup: keyboard,
+  });
 
   const deliveryData = ctx.session.deliveryData || "Выбран самовывоз";
   const username = ctx.from.username;
@@ -264,7 +269,6 @@ bot.on("message:successful_payment", async (ctx) => {
 });
 
 // логика по опен коллу
-
 bot.callbackQuery("apply", (ctx) => {
   ctx.answerCallbackQuery();
 
@@ -320,7 +324,10 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
   ctx.reply("💽 сохраняем информацию, это может занять какое-то время");
   if (session.formData.files && session.formData.files.length > 0) {
     try {
-      const newFolderId = await uploadFilesToNewFolder(session.formData.name, session.formData.files)
+      const newFolderId = await uploadFilesToNewFolder(
+        session.formData.name,
+        session.formData.files
+      );
       for (const file of session.formData.files) {
         try {
           fs.unlink(file.filePath, (err) => {
@@ -354,7 +361,13 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
       }
       await appendToSheet(values);
       session.step = "finalStep";
-      ctx.reply("Готово! Спасибо за заявку, ответим в первой неделе ноября");
+      const keyboard = new InlineKeyboard()
+        .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
+        .row()
+        .text("Купить Численничек 2023", "buy");
+      ctx.reply("Готово! Спасибо за заявку, ответим в первой неделе ноября", {
+        reply_markup: keyboard,
+      });
     } catch (error) {
       // console.error(`Failed to upload sheet`, error);
       console.error(`Failed to upload sheet`);
@@ -363,6 +376,46 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
   } else {
     ctx.reply("Вы не загрузили ни одного файла.");
   }
+});
+
+async function showEditMenu(ctx) {
+  const keyboard = new InlineKeyboard()
+    .text("Имя", "editBio")
+    .text("Ссылка на соцсеть", "editSocialMedia")
+    .row()
+    .text("Описание", "editDesc")
+    .row()
+    .text("Загрузить файлы заново", "editFiles");
+  const allInfo = `Имя: ${ctx.session.formData.name}\nСсылка на соцсеть: ${ctx.session.formData.socialMedia}\nОписание работы: ${ctx.session.formData.description}\nЗагружено файлов: ${ctx.session.formData.files.length}`;
+  await ctx.reply(`${allInfo}\n\n Выберите, что нужно отредактировать:`, {
+    reply_markup: keyboard,
+  });
+}
+
+bot.callbackQuery("edit", async (ctx) => {
+  ctx.answerCallbackQuery();
+  await showEditMenu(ctx);
+});
+
+bot.callbackQuery("editBio", async (ctx) => {
+  ctx.session.step = "bioInfo";
+  ctx.reply("как звать?");
+});
+
+bot.callbackQuery("editSocialMedia", async (ctx) => {
+  ctx.session.step = "socialMedia";
+  ctx.reply("Пришлите ссылку на вашу соцсеть");
+});
+
+bot.callbackQuery("editDesc", async (ctx) => {
+  ctx.session.step = "collectDescription";
+  ctx.reply("Пришлите описание вашей работы");
+});
+
+bot.callbackQuery("editFiles", async (ctx) => {
+  ctx.session.step = "collectFile";
+  ctx.session.formData.files = [];
+  ctx.reply("Отправьте до 10 файлов с вашей работой.");
 });
 
 bot.callbackQuery("confirmSubmission", async (ctx) => {
@@ -402,56 +455,86 @@ bot.on("message", async (ctx) => {
   if (session.step === "bioInfo") {
     session.formData.name = ctx.message.text;
     session.formData.username = ctx.message.from.username;
-    ctx.reply("Пришлите описание вашей работы");
-    session.step = "collectDescription";
+    if (!session.formData.socialMedia) {
+      ctx.reply("Пришлите ссылку на вашу соцсеть");
+      session.step = "socialMedia";
+    } else {
+      showEditMenu(ctx);
+    }
+  } else if (session.step === "socialMedia") {
+    session.formData.socialMedia = ctx.message.text;
+    if (!session.formData.description) {
+      ctx.reply("Пришлите описание вашей работы");
+      session.step = "collectDescription";
+    } else {
+      showEditMenu(ctx);
+    }
   } else if (session.step === "collectDescription") {
     session.formData.description = ctx.message.text;
-    ctx.reply(
-      "Отправьте до 10 файлов с вашей работой. Когда закончите отправьте слово «готово»"
-    );
-    session.step = "collectFile";
+    if (!session.formData.files) {
+      ctx.reply(
+        "Отправьте до 10 файлов с вашей работой."
+      );
+      session.step = "collectFile";
+    } else {
+      showEditMenu(ctx);
+    }
   } else if (session.step === "collectFile") {
     const keyboard = new InlineKeyboard().text("Готово", "confirmSubmission");
-    if (ctx.message.document || ctx.message.photo) {
-      const files = ctx.message.document
-        ? [ctx.message.document]
-        : [ctx.message.photo[ctx.message.photo.length - 1]];
 
-      for (const fileObject of files) {
-        const fileId = fileObject.file_id;
-        const file = await ctx.api.getFile(fileId);
-        const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-        const fileName = ctx.message.document
-          ? ctx.message.document.file_name
-          : `photo_${Date.now()}.jpg`;
-        const filePath = path.join(__dirname, fileName);
+    if (!session.formData.files) {
+      session.formData.files = [];
+    }
 
-        const response = await axios({
-          url: fileUrl,
-          method: "GET",
-          responseType: "stream",
+    if (!session.mediaGroupTimeout) {
+      session.mediaGroupTimeout = null;
+    }
+
+    const files = [];
+    if (ctx.message.document) {
+      files.push(ctx.message.document);
+    } else if (ctx.message.photo) {
+      files.push(ctx.message.photo[ctx.message.photo.length - 1]);
+    }
+
+    for (const fileObject of files) {
+      const fileId = fileObject.file_id;
+      const file = await ctx.api.getFile(fileId);
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+      const fileName = ctx.message.document
+        ? ctx.message.document.file_name
+        : `photo_${Date.now()}.jpg`;
+      const filePath = path.join(__dirname, fileName);
+
+      const response = await axios({
+        url: fileUrl,
+        method: "GET",
+        responseType: "stream",
+      });
+
+      response.data.pipe(fs.createWriteStream(filePath));
+      await new Promise((resolve) => response.data.on("end", resolve));
+
+      session.formData.files.push({
+        filePath: filePath,
+        fileName: fileName,
+      });
+
+      if (session.formData.files.length >= 10) {
+        ctx.reply("Вы загрузили максимальное количество файлов", {
+          reply_markup: keyboard,
         });
-
-        response.data.pipe(fs.createWriteStream(filePath));
-        await new Promise((resolve) => response.data.on("end", resolve));
-
-        if (!session.formData.files) {
-          session.formData.files = [];
-        }
-
-        session.formData.files.push({
-          filePath: filePath,
-          fileName: fileName,
-        });
-
-        if (session.formData.files.length >= 10) {
-          ctx.reply("Вы загрузили максимальное количество файлов", {
-            reply_markup: keyboard,
-          });
-          return;
-        }
+        return;
       }
+    }
 
+    // Clear any existing timeout to wait for more files
+    if (session.mediaGroupTimeout) {
+      clearTimeout(session.mediaGroupTimeout);
+    }
+
+    // Set a timeout to detect when no more files are arriving
+    session.mediaGroupTimeout = setTimeout(async () => {
       ctx.reply(
         `Вы загрузили ${
           session.formData.files.length
@@ -462,7 +545,8 @@ bot.on("message", async (ctx) => {
           reply_markup: keyboard,
         }
       );
-    }
+      session.mediaGroupTimeout = null; 
+    }, 1000);
   }
 
   // if (session.step === "finalStep") {
