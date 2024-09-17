@@ -54,7 +54,7 @@ const valueStep = (ctx) => {
 const paymentStep = async (ctx) => {
   const usersAmount = parseInt(ctx.msg.text, 10) * parseInt(ctx.session.amount);
 
-  if (isNaN(usersAmount) || usersAmount < 500) {
+  if (isNaN(usersAmount) || usersAmount < 500 || parseInt(ctx.msg.text, 10) < 500) {
     await ctx.reply("Пожалуйста, введите сумму не менее 500");
   } else {
     const totalAmount =
