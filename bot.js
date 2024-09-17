@@ -42,7 +42,11 @@ const getInvoice = (id, usersAmount) => {
 };
 
 const amountStep = (ctx) => {
-  ctx.reply("Введите количество календарей");
+  ctx.reply(
+    `<b>Заберите себе экземпляр последнего выпуска Численничка за донат от 500р!</b>\n\nВведите количество календарей`, {
+      parse_mode: 'HTML'
+    }
+  );
   ctx.session.step = "amount";
 };
 
@@ -184,7 +188,7 @@ bot.command("start", async (ctx) => {
 
 Следите за нашей работой в канале <a href="https://t.me/collective_ism">collective_ism</a>.
 
-<b>Численничек</b> — это проект отрывного календаря, составленного из 365 работ разных авторов. Проект был запущен в 2019 году и приостановлен в 2024. За пять лет проекта мы провели пять опен-коллов, отобрали более 1,5 тысяч работ и напечатали 5 выпусков календаря. Численничек 2023 — последний выпуск календаря на сегодняшний день — посвящен феномену шифра, сокрытию, утаиванию и иносказанию.
+<b>Численничек</b> — это проект отрывного календаря, составленного из 365 работ разных авторов. Проект был запущен в 2019 году и приостановлен в 2024. За пять лет мы провели пять опен-коллов, отобрали более 1,5 тысяч работ и напечатали 5 выпусков календаря. Численничек 2023 — последний выпуск календаря на сегодняшний день — посвящен феномену шифра, сокрытию, утаиванию и иносказанию.
 
 Подробности о Численничке и нашей художественной практике читайте в <a href="https://obdn.ru/articles/chislennichek">журнале «Объединение»</a> или слушайте наш <a href="https://garagemca.org/event/public-talk-from-chislennichek-to-collective-writing">артист-ток</a>, состоявшийся год назад в Музее современного искусства «Гараж».`;
 
@@ -270,26 +274,56 @@ bot.callbackQuery("apply", async (ctx) => {
     .row()
     .text("Заполнить заявку", "start_apply");
 
+  const message = `
+  <b>«Если интернет отключат завтра, что вы возьмете с собой?»</b>
+
+Обещания безграничной свободы и автономности эпохи раннего интернета не оправдались. Своим пионерам интернет виделся способом противопоставить себя контролю со стороны, например, государства или корпораций, однако разочарование случилось достаточно быстро. В онлайн, как и в оффлайн пространстве, есть границы, но также — серые зоны и слепые пятна. С каждым годом происходящее в интернете всё сильнее влияет на реальную жизнь. Если вам не посчастливилось жить в условиях цензуры и репрессий, то вы знаете, что в интернете порой не стоит оставлять следы.
+
+Пространство интернета не оказалось безграничным и в контексте хранения информации: место на облаке, жестком диске или флешке неминуемо заканчивается. Однако сбор и хранение информации теперь осуществляются по-разному: можно довольствоваться папками на рабочем столе, можно переносить все на жесткие диски, а также выстраивать баланс между материальным и диджитал архивом.
+
+Как появление интернета и последующее разочарование в нем могут повлиять на то, как сохраняется память, и то, как собираются коллекции? Материальное хранение — семейные альбомы, дневники, записные книжки, многое другое — ограничено пространством и хрупкостью своих объектов, в то время, как ведение диджитал архива не всегда безопасно. Наконец, с внушительной коллекцией сложно быть на ходу и в движении — материальное тяготит и привязывает к конкретному месту. 
+
+В контексте происходящего последние несколько лет назревает вопрос: как организовать хранение, если интернет отключат? Если наступит апокалипсис? Где коллекция будет в большей безопасности — оффлайн или онлайн, в материальном или диджитал виде? Свобода перемещения заставляет склоняться в пользу последнего: жесткий диск со снимками 10 тысяч ракушек удобней коллекции из 10 тысяч ракушек.
+
+Например, наша коллекция — остаток тиража Численничка 2023 — скоро выселит нас из квартиры: непросто делить двухкомнатное пространство с Х коробок с Х экземплярами календаря. В свете грядущего переезда мы задумались о том, как возможно собирательство в принципе в условиях ограничений. И как организованы коллекции других?
+  `;
+
   try {
     await ctx.api.sendMediaGroup(ctx.chat.id, [
       { type: "photo", media: "https://i.imgur.com/erQv8oR.png" },
       { type: "photo", media: "https://i.imgur.com/6ugNwXE.png" },
     ]);
-    ctx.reply(
-      "«Если интернет отключат завтра, что вы возьмете с собой?» кураторский текст",
-      {
-        reply_markup: keyboard,
-      }
-    );
+    ctx.reply(message, {
+      reply_markup: keyboard,
+      parse_mode: "HTML",
+    });
   } catch (error) {
     console.log(error);
   }
 });
 
+bot.callbackQuery("rules", (ctx) => {
+  const keyboard = new InlineKeyboard()
+    .text("Заполнить заявку", "start_apply");
+
+  const text = `<b>Условия участия:</b>
+
+- работа, осмысляющая заданную тему
+- любой медиум (адаптированный под диджитал формат)
+- до 10 единиц
+- выбранные работы будут опубликованы в канале <a href="https://t.me/collective_ism">collective_ism</a>
+- сбор работ до 31 октября`
+
+  ctx.reply(text, {
+    parse_mode: "HTML", 
+    reply_markup: keyboard,
+  })
+})
+
 bot.callbackQuery("start_apply", (ctx) => {
   ctx.answerCallbackQuery();
   ctx.session.step = "bioInfo";
-  ctx.reply("как звать?");
+  ctx.reply("Как вас зовут?");
 });
 
 // создает ссылку для файла на гугл диске
@@ -383,10 +417,13 @@ async function showEditMenu(ctx) {
     .text("Имя", "editBio")
     .text("Ссылка на соцсеть", "editSocialMedia")
     .row()
+    .text("Название", "editNameOfArt")
     .text("Описание", "editDesc")
     .row()
-    .text("Загрузить файлы заново", "editFiles");
-  const allInfo = `Имя: ${ctx.session.formData.name}\nСсылка на соцсеть: ${ctx.session.formData.socialMedia}\nОписание работы: ${ctx.session.formData.description}\nЗагружено файлов: ${ctx.session.formData.files.length}`;
+    .text("Загрузить файлы заново", "editFiles")
+    .row()
+    .text("Сохранить и отправить", "saveAndSend");
+  const allInfo = `Имя: ${ctx.session.formData.name}\nСсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание: ${ctx.session.formData.description}\nЗагружено файлов: ${ctx.session.formData.files.length}`;
   await ctx.reply(`${allInfo}\n\n Выберите, что нужно отредактировать:`, {
     reply_markup: keyboard,
   });
@@ -399,17 +436,22 @@ bot.callbackQuery("edit", async (ctx) => {
 
 bot.callbackQuery("editBio", async (ctx) => {
   ctx.session.step = "bioInfo";
-  ctx.reply("как звать?");
+  ctx.reply("Как вас зовут?");
 });
 
 bot.callbackQuery("editSocialMedia", async (ctx) => {
   ctx.session.step = "socialMedia";
-  ctx.reply("Пришлите ссылку на вашу соцсеть");
+  ctx.reply("Ссылка на ваши социальные сети");
+});
+
+bot.callbackQuery("editNameOfAr", (ctx) => {
+  ctx.session.step = "nameOfArt";
+  ctx.reply("Название работы");
 });
 
 bot.callbackQuery("editDesc", async (ctx) => {
   ctx.session.step = "collectDescription";
-  ctx.reply("Пришлите описание вашей работы");
+  ctx.reply("Описание работы");
 });
 
 bot.callbackQuery("editFiles", async (ctx) => {
@@ -427,7 +469,7 @@ bot.callbackQuery("confirmSubmission", async (ctx) => {
     const keyboard = new InlineKeyboard()
       .text("Редактировать", "edit")
       .text("Сохранить и отправить", "saveAndSend");
-    const allInfo = `Имя: ${session.formData.name}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\nНажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
+    const allInfo = `Имя: ${session.formData.name}\nсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\nНажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
     ctx.reply(allInfo, {
       reply_markup: keyboard,
     });
@@ -473,8 +515,16 @@ bot.on("message", async (ctx) => {
     }
   } else if (session.step === "socialMedia") {
     session.formData.socialMedia = ctx.message.text;
+    if (!session.formData.nameofart) {
+      ctx.reply("Название работы");
+      session.step = "nameOfArt";
+    } else {
+      showEditMenu(ctx);
+    }
+  } else if (session.step === "nameOfArt") {
+    session.formData.nameofart = ctx.message.text;
     if (!session.formData.description) {
-      ctx.reply("Пришлите описание вашей работы");
+      ctx.reply("Описание");
       session.step = "collectDescription";
     } else {
       showEditMenu(ctx);
