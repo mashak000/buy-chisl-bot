@@ -282,7 +282,7 @@ bot.on("message:successful_payment", async (ctx) => {
   const deliveryData = ctx.session.deliveryData || "Выбран самовывоз";
   const username = ctx.from.username;
 
-  const combinedData = `Девачки, пришел новый заказ💅💅💅\nИнформация по доставке: ${deliveryData}\nПользователь: @${username}`;
+  const combinedData = `Девачки, пришел новый заказ💅💅💅\nИнформация по доставке: ${deliveryData}\nПользователь: @${username}\nКоличество: ${ctx.session.amount}`;
 
   await bot.api.sendMessage(process.env.CHAT_ID, combinedData);
 
