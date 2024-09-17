@@ -42,16 +42,12 @@ const getInvoice = (id, usersAmount) => {
 };
 
 const amountStep = (ctx) => {
-  ctx.reply(
-    `<b>Заберите себе экземпляр последнего выпуска Численничка за донат от 500р!</b>\n\nВведите количество календарей`, {
-      parse_mode: 'HTML'
-    }
-  );
+  ctx.reply(`Введите количество календарей`);
   ctx.session.step = "amount";
 };
 
 const valueStep = (ctx) => {
-  ctx.reply("Введите сумму доната (только число, не менее 500)");
+  ctx.reply("Введите сумму доната не менее 500 рублей (только число)");
   ctx.session.step = "payment";
 };
 
@@ -186,18 +182,15 @@ bot.command("start", async (ctx) => {
 
 <b>collective_ism</b> — независимое кураторское объединение создательниц Численничка. Мы занимаемся теорией и практикой современного искусства, а наши интересы лежат на стыке критического, визуального, смешного и простого.
 
-Следите за нашей работой в канале <a href="https://t.me/collective_ism">collective_ism</a>.
+Следите за нашей работой в канале <a href="https://t.me/collective_ism">collective_ism</a> или в <a href="https://www.instagram.com/collective_ism/">инстаграме</a>.
 
 <b>Численничек</b> — это проект отрывного календаря, составленного из 365 работ разных авторов. Проект был запущен в 2019 году и приостановлен в 2024. За пять лет мы провели пять опен-коллов, отобрали более 1,5 тысяч работ и напечатали 5 выпусков календаря. Численничек 2023 — последний выпуск календаря на сегодняшний день — посвящен феномену шифра, сокрытию, утаиванию и иносказанию.
 
-Подробности о Численничке и нашей художественной практике читайте в <a href="https://obdn.ru/articles/chislennichek">журнале «Объединение»</a> или слушайте наш <a href="https://garagemca.org/event/public-talk-from-chislennichek-to-collective-writing">артист-ток</a>, состоявшийся год назад в Музее современного искусства «Гараж».`;
+Подробности о Численничке и нашей художественной практике читайте в <a href="https://obdn.ru/articles/chislennichek">журнале «Объединение»</a> или слушайте наш <a href="https://garagemca.org/event/public-talk-from-chislennichek-to-collective-writing">артист-ток</a>, состоявшийся год назад в Музее современного искусства «Гараж».
+
+Возникли проблемы? Отправьте /help`;
 
   try {
-    await ctx.api.sendMediaGroup(ctx.chat.id, [
-      { type: "photo", media: "https://i.imgur.com/98k1Iyn.png" },
-      { type: "photo", media: "https://i.imgur.com/KeWiOat.png" },
-    ]);
-
     const keyboard = new InlineKeyboard()
       .text("📆 last sale численничек 📆", "buy")
       .row()
@@ -218,8 +211,37 @@ bot.command("start", async (ctx) => {
 
 // логика покупки
 bot.callbackQuery("buy", async (ctx) => {
-  amountStep(ctx);
+  try {
+    const keyboard = new InlineKeyboard().text("Купить", "start_buy")
+    await ctx.api.sendMediaGroup(ctx.chat.id, [
+      { type: "photo", media: "https://imgur.com/49W6H4W" },
+      { type: "photo", media: "https://imgur.com/srzaUGt" },
+    ]);
+    await ctx.reply(
+      `<b>Заберите себе экземпляр последнего выпуска Численничка за донат от 500р!</b>
+
+Темой Численничка 2023 стала аббревиатура Э.Н.И.Г.М.А. (Это Название Использует Гарантии Молчания Аббревиатуры). Юбилейный пятый и последний Численничек был посвящен шифрам, кодам, знакам и всем возможным способам их использования и осмысления. Шифр видится главной действующей силой искусства: героя и автора нет, остались бесконечные лабиринты из знаков, кодов и отсылок. 
+
+Внутри:
+
+- 365 работ художников и авторов
+- Крепление, позволяющее повесить календарь или разместить на горизонтальной поверхности
+- На обороте каждого листа-дня размещена экспликация, написанная автором работы
+- 380 страниц, 8 Х 14,5 см, цветная двусторонняя офсетная печать (4+1)
+      `,
+      {
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
 });
+
+bot.callbackQuery("start_buy", (ctx) => {
+  amountStep(ctx);
+})
 
 bot.callbackQuery("curier", async (ctx) => {
   ctx.session.delivery = "courier";
@@ -239,7 +261,7 @@ bot.callbackQuery("post", async (ctx) => {
 
 bot.callbackQuery("pickup", async (ctx) => {
   ctx.session.delivery = "pickup";
-  amountStep(ctx);
+  valueStep(ctx);
 });
 
 bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
@@ -248,9 +270,13 @@ bot.on("message:successful_payment", async (ctx) => {
   const keyboard = new InlineKeyboard()
     .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
     .text("Опен колл", "apply");
-  await ctx.reply("Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами", {
-    reply_markup: keyboard,
-  });
+  await ctx.reply(
+    "<b>Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами</b>",
+    {
+      reply_markup: keyboard,
+      parse_mode: "HTML",
+    }
+  );
 
   const deliveryData = ctx.session.deliveryData || "Выбран самовывоз";
   const username = ctx.from.username;
@@ -290,8 +316,8 @@ bot.callbackQuery("apply", async (ctx) => {
 
   try {
     await ctx.api.sendMediaGroup(ctx.chat.id, [
-      { type: "photo", media: "https://i.imgur.com/erQv8oR.png" },
-      { type: "photo", media: "https://i.imgur.com/6ugNwXE.png" },
+      { type: "photo", media: "https://imgur.com/nkPaI1l" },
+      { type: "photo", media: "https://imgur.com/uV0vFJ9" },
     ]);
     ctx.reply(message, {
       reply_markup: keyboard,
@@ -303,8 +329,7 @@ bot.callbackQuery("apply", async (ctx) => {
 });
 
 bot.callbackQuery("rules", (ctx) => {
-  const keyboard = new InlineKeyboard()
-    .text("Заполнить заявку", "start_apply");
+  const keyboard = new InlineKeyboard().text("Заполнить заявку", "start_apply");
 
   const text = `<b>Условия участия:</b>
 
@@ -312,13 +337,13 @@ bot.callbackQuery("rules", (ctx) => {
 - любой медиум (адаптированный под диджитал формат)
 - до 10 единиц
 - выбранные работы будут опубликованы в канале <a href="https://t.me/collective_ism">collective_ism</a>
-- сбор работ до 31 октября`
+- сбор работ до 31 октября`;
 
   ctx.reply(text, {
-    parse_mode: "HTML", 
+    parse_mode: "HTML",
     reply_markup: keyboard,
-  })
-})
+  });
+});
 
 bot.callbackQuery("start_apply", (ctx) => {
   ctx.answerCallbackQuery();
@@ -399,9 +424,13 @@ bot.callbackQuery("saveAndSend", async (ctx) => {
         .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
         .row()
         .text("Купить Численничек 2023", "buy");
-      ctx.reply("Готово! Спасибо за заявку, ответим в первой неделе ноября", {
-        reply_markup: keyboard,
-      });
+      ctx.reply(
+        "<b>Готово! Спасибо за заявку, ответим в начале ноября</b>",
+        {
+          parse_mode: "HTML",
+          reply_markup: keyboard,
+        }
+      );
     } catch (error) {
       // console.error(`Failed to upload sheet`, error);
       console.error(`Failed to upload sheet`);
@@ -499,7 +528,9 @@ bot.on("message", async (ctx) => {
     });
   } else if (session.step === "delivery") {
     session.deliveryData = ctx.msg.text;
-    await ctx.reply("Спасибо, мы сохранили информацию о доставке");
+    await ctx.reply("<b>Спасибо, мы сохранили информацию о доставке</b>", {
+      parse_mode: "HTML",
+    });
     valueStep(ctx);
   }
 
@@ -549,64 +580,90 @@ bot.on("message", async (ctx) => {
     }
 
     const files = [];
-    if (ctx.message.document) {
-      files.push(ctx.message.document);
-    } else if (ctx.message.photo) {
-      files.push(ctx.message.photo[ctx.message.photo.length - 1]);
-    }
 
-    for (const fileObject of files) {
-      const fileId = fileObject.file_id;
-      const file = await ctx.api.getFile(fileId);
-      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-      const fileName = ctx.message.document
-        ? ctx.message.document.file_name
-        : `photo_${Date.now()}.jpg`;
-      const filePath = path.join(__dirname, fileName);
-
-      const response = await axios({
-        url: fileUrl,
-        method: "GET",
-        responseType: "stream",
-      });
-
-      response.data.pipe(fs.createWriteStream(filePath));
-      await new Promise((resolve) => response.data.on("end", resolve));
-
-      session.formData.files.push({
-        filePath: filePath,
-        fileName: fileName,
-      });
-
-      if (session.formData.files.length >= 10) {
-        ctx.reply("Вы загрузили максимальное количество файлов", {
-          reply_markup: keyboard,
-        });
-        return;
+    try {
+      if (ctx.message.document) {
+        files.push(ctx.message.document);
+      } else if (ctx.message.photo) {
+        files.push(ctx.message.photo[ctx.message.photo.length - 1]);
+      } else if (ctx.message.video) {
+        files.push(ctx.message.video);
+      } else if (ctx.message.audio) {
+        files.push(ctx.message.audio);
+      } else if (ctx.message.voice) {
+        files.push(ctx.message.voice);
+      } else {
+        // Unsupported file type
+        throw new Error("Unsupported file format.");
       }
-    }
 
-    // Clear any existing timeout to wait for more files
-    if (session.mediaGroupTimeout) {
-      clearTimeout(session.mediaGroupTimeout);
-    }
+      for (const fileObject of files) {
+        const fileId = fileObject.file_id;
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+        const fileName = ctx.message.document
+          ? ctx.message.document.file_name
+          : ctx.message.photo
+          ? `photo_${Date.now()}.jpg`
+          : ctx.message.video
+          ? `video_${Date.now()}.mp4`
+          : ctx.message.audio
+          ? `audio_${Date.now()}.mp3`
+          : ctx.message.voice
+          ? `voice_${Date.now()}.ogg`
+          : `file_${Date.now()}`;
 
-    // Set a timeout to detect when no more files are arriving
-    session.mediaGroupTimeout = setTimeout(async () => {
-      ctx.reply(
-        `Вы загрузили ${session.formData.files.length} файл${
-          parseInt(session.formData.files.length) === 1
-            ? ""
-            : [2, 3, 4].includes(parseInt(session.formData.files.length))
-            ? "a"
-            : "ов"
-        }. Вы можете отправить еще ${10 - session.formData.files.length}.`,
-        {
-          reply_markup: keyboard,
+        const filePath = path.join(__dirname, fileName);
+
+        const response = await axios({
+          url: fileUrl,
+          method: "GET",
+          responseType: "stream",
+        });
+
+        response.data.pipe(fs.createWriteStream(filePath));
+        await new Promise((resolve) => response.data.on("end", resolve));
+
+        session.formData.files.push({
+          filePath: filePath,
+          fileName: fileName,
+        });
+
+        if (session.formData.files.length >= 10) {
+          ctx.reply("Вы загрузили максимальное количество файлов", {
+            reply_markup: keyboard,
+          });
+          return;
         }
+      }
+
+      // Clear any existing timeout to wait for more files
+      if (session.mediaGroupTimeout) {
+        clearTimeout(session.mediaGroupTimeout);
+      }
+
+      // Set a timeout to detect when no more files are arriving
+      session.mediaGroupTimeout = setTimeout(async () => {
+        ctx.reply(
+          `Вы загрузили ${session.formData.files.length} файл${
+            parseInt(session.formData.files.length) === 1
+              ? ""
+              : [2, 3, 4].includes(parseInt(session.formData.files.length))
+              ? "a"
+              : "ов"
+          }. Вы можете отправить еще ${10 - session.formData.files.length}.`,
+          {
+            reply_markup: keyboard,
+          }
+        );
+        session.mediaGroupTimeout = null;
+      }, 1000);
+    } catch (error) {
+      console.error("Error processing files:", error.message);
+      ctx.reply(
+        "Произошла ошибка при загрузке. Пожалуйста, отправьте файл в поддерживаемом формате."
       );
-      session.mediaGroupTimeout = null;
-    }, 1000);
+    }
   }
 
   // if (session.step === "finalStep") {
