@@ -269,6 +269,7 @@ bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
 bot.on("message:successful_payment", async (ctx) => {
   const keyboard = new InlineKeyboard()
     .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
+    .row()
     .text("Опен колл", "apply");
   await ctx.reply(
     "<b>Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами</b>",
