@@ -42,44 +42,86 @@ const getInvoice = (id, usersAmount) => {
 };
 
 const amountStep = (ctx) => {
-  ctx.reply(`Введите количество календарей`);
-  ctx.session.step = "amount";
+  try {
+    ctx.reply(`Введите количество календарей`);
+    ctx.session.step = "amount";
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
+    }
+  }
 };
 
 const valueStep = (ctx) => {
-  ctx.reply("Введите сумму доната не менее 500 рублей (только число)");
-  ctx.session.step = "payment";
+  try {
+    ctx.reply("Введите сумму доната не менее 500 рублей (только число)");
+    ctx.session.step = "payment";
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
+    }
+  }
 };
 
 const paymentStep = async (ctx) => {
   const usersAmount = parseInt(ctx.msg.text, 10) * parseInt(ctx.session.amount);
-
-  if (isNaN(usersAmount) || usersAmount < 500 || parseInt(ctx.msg.text, 10) < 500) {
-    await ctx.reply("Пожалуйста, введите сумму не менее 500");
-  } else {
-    const totalAmount =
-      deliveryOptions[ctx.session.delivery].price + usersAmount;
-    const invoice = getInvoice(ctx.chat.id, totalAmount);
-    try {
-      await axios.post(
-        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendInvoice`,
-        {
-          chat_id: ctx.chat.id,
-          title: invoice.title,
-          description: invoice.description,
-          currency: invoice.currency,
-          prices: invoice.prices,
-          payload: invoice.payload,
-          provider_token: process.env.PROVIDER_TOKEN,
-          start_parameter: "get_access",
-        }
-      );
-      ctx.session.step = null;
-    } catch (error) {
-      console.error(
-        "Error sending invoice:",
-        error.response ? error.response.data : error.message
-      );
+  try {
+    if (
+      isNaN(usersAmount) ||
+      usersAmount < 500 ||
+      parseInt(ctx.msg.text, 10) < 500
+    ) {
+      await ctx.reply("Пожалуйста, введите сумму не менее 500");
+    } else {
+      const totalAmount =
+        deliveryOptions[ctx.session.delivery].price + usersAmount;
+      const invoice = getInvoice(ctx.chat.id, totalAmount);
+      try {
+        await axios.post(
+          `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendInvoice`,
+          {
+            chat_id: ctx.chat.id,
+            title: invoice.title,
+            description: invoice.description,
+            currency: invoice.currency,
+            prices: invoice.prices,
+            payload: invoice.payload,
+            provider_token: process.env.PROVIDER_TOKEN,
+            start_parameter: "get_access",
+          }
+        );
+        ctx.session.step = null;
+      } catch (error) {
+        console.error(
+          "Error sending invoice:",
+          error.response ? error.response.data : error.message
+        );
+      }
+    }
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
     }
   }
 };
@@ -159,21 +201,38 @@ async function uploadFilesToNewFolder(folderName, files) {
 
 // добавляет строку в гугл таблицу
 async function appendToSheet(values) {
-  const resource = {
-    values: [values],
-  };
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: "aplication!A1",
-    valueInputOption: "USER_ENTERED",
-    resource: resource,
-  });
+  try {
+    const resource = {
+      values: [values],
+    };
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: "aplication!A1",
+      valueInputOption: "USER_ENTERED",
+      resource: resource,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 bot.command("help", async (ctx) => {
-  ctx.reply(
-    "Если у вас возникли трудности с оформлением покупки или отправки заявки на опенколл, попробуйте очистить историю диалога и заполнить информацию еще раз, если и это не помогло, напишите @mashak000"
-  );
+  try {
+    ctx.reply(
+      "Если у вас возникли трудности с оформлением покупки или отправки заявки на опенколл, попробуйте очистить историю диалога и заполнить информацию еще раз, если и это не помогло, напишите @mashak000"
+    );
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
+    }
+  }
 });
 
 bot.command("start", async (ctx) => {
@@ -202,17 +261,30 @@ bot.command("start", async (ctx) => {
       disable_web_page_preview: true,
     });
   } catch (error) {
-    console.error("Error sending the message:", error);
-    ctx.reply(
-      "Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова."
-    );
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chat ID ${ctx.chat.id} has blocked the bot.`);
+      // Optionally, you can stop further processing for this user
+    } else {
+      console.error("Error sending message:", error);
+      // Optionally, send an error message to the user or take other actions
+      try {
+        await ctx.reply(
+          "Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова."
+        );
+      } catch (err) {
+        console.error("Error sending fallback message:", err);
+      }
+    }
   }
 });
 
 // логика покупки
 bot.callbackQuery("buy", async (ctx) => {
   try {
-    const keyboard = new InlineKeyboard().text("Купить", "start_buy")
+    const keyboard = new InlineKeyboard().text("Купить", "start_buy");
     await ctx.api.sendMediaGroup(ctx.chat.id, [
       { type: "photo", media: "https://imgur.com/49W6H4W" },
       { type: "photo", media: "https://imgur.com/srzaUGt" },
@@ -241,22 +313,48 @@ bot.callbackQuery("buy", async (ctx) => {
 
 bot.callbackQuery("start_buy", (ctx) => {
   amountStep(ctx);
-})
+});
 
 bot.callbackQuery("curier", async (ctx) => {
-  ctx.session.delivery = "courier";
-  await ctx.reply(
-    "Пожалуйста, пришлите адрес доставки, а также контактный номер телефона"
-  );
-  ctx.session.step = "delivery";
+  try {
+    ctx.session.delivery = "courier";
+    await ctx.reply(
+      "Пожалуйста, пришлите адрес доставки, а также контактный номер телефона"
+    );
+    ctx.session.step = "delivery";
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
+    }
+  }
 });
 
 bot.callbackQuery("post", async (ctx) => {
-  ctx.session.delivery = "post";
-  await ctx.reply(
-    "Пожалуйста, пришлите адрес доставки, индекс, ФИО получателя, а также контактный номер телефона"
-  );
-  ctx.session.step = "delivery";
+  try {
+    ctx.session.delivery = "post";
+    await ctx.reply(
+      "Пожалуйста, пришлите адрес доставки, индекс, ФИО получателя, а также контактный номер телефона"
+    );
+    ctx.session.step = "delivery";
+  } catch (error) {
+    if (
+      error.error_code === 403 &&
+      error.description.includes("bot was blocked by the user")
+    ) {
+      console.log(`User with chatId ${ctx.chat.id} has blocked the bot.`);
+      // You can optionally log this in your database for future reference
+    } else {
+      console.error(`Failed to send message to ${ctx.chat.id}:`, error);
+      // Handle other types of errors if necessary
+    }
+  }
 });
 
 bot.callbackQuery("pickup", async (ctx) => {
@@ -267,27 +365,31 @@ bot.callbackQuery("pickup", async (ctx) => {
 bot.on("pre_checkout_query", (ctx) => ctx.answerPreCheckoutQuery(true));
 
 bot.on("message:successful_payment", async (ctx) => {
-  const keyboard = new InlineKeyboard()
-    .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
-    .row()
-    .text("Опен колл", "apply");
-  await ctx.reply(
-    "<b>Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами</b>",
-    {
-      reply_markup: keyboard,
-      parse_mode: "HTML",
-    }
-  );
+  try {
+    const keyboard = new InlineKeyboard()
+      .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
+      .row()
+      .text("Опен колл", "apply");
+    await ctx.reply(
+      "<b>Спасибо, платеж прошел успешно! Мы скоро свяжемся с Вами</b>",
+      {
+        reply_markup: keyboard,
+        parse_mode: "HTML",
+      }
+    );
 
-  const deliveryData = ctx.session.deliveryData || "Выбран самовывоз";
-  const username = ctx.from.username;
+    const deliveryData = ctx.session.deliveryData || "Выбран самовывоз";
+    const username = ctx.from.username;
 
-  const combinedData = `Девачки, пришел новый заказ💅💅💅\nИнформация по доставке: ${deliveryData}\nПользователь: @${username}\nКоличество: ${ctx.session.amount}`;
+    const combinedData = `Девачки, пришел новый заказ💅💅💅\nИнформация по доставке: ${deliveryData}\nПользователь: @${username}\nКоличество: ${ctx.session.amount}`;
 
-  await bot.api.sendMessage(process.env.CHAT_ID, combinedData);
+    await bot.api.sendMessage(process.env.CHAT_ID, combinedData);
 
-  delete ctx.session.delivery;
-  delete ctx.session.deliveryData;
+    delete ctx.session.delivery;
+    delete ctx.session.deliveryData;
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // логика по опен коллу
@@ -330,26 +432,37 @@ bot.callbackQuery("apply", async (ctx) => {
 });
 
 bot.callbackQuery("rules", (ctx) => {
-  const keyboard = new InlineKeyboard().text("Заполнить заявку", "start_apply");
+  try {
+    const keyboard = new InlineKeyboard().text(
+      "Заполнить заявку",
+      "start_apply"
+    );
 
-  const text = `<b>Условия участия:</b>
+    const text = `<b>Условия участия:</b>
+  
+  - работа, осмысляющая заданную тему
+  - любой медиум (адаптированный под диджитал формат)
+  - до 10 единиц
+  - выбранные работы будут опубликованы в канале <a href="https://t.me/collective_ism">collective_ism</a>
+  - сбор работ до 31 октября`;
 
-- работа, осмысляющая заданную тему
-- любой медиум (адаптированный под диджитал формат)
-- до 10 единиц
-- выбранные работы будут опубликованы в канале <a href="https://t.me/collective_ism">collective_ism</a>
-- сбор работ до 31 октября`;
-
-  ctx.reply(text, {
-    parse_mode: "HTML",
-    reply_markup: keyboard,
-  });
+    ctx.reply(text, {
+      parse_mode: "HTML",
+      reply_markup: keyboard,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("start_apply", (ctx) => {
-  ctx.answerCallbackQuery();
-  ctx.session.step = "bioInfo";
-  ctx.reply("Как вас зовут?");
+  try {
+    ctx.answerCallbackQuery();
+    ctx.session.step = "bioInfo";
+    ctx.reply("Как вас зовут?");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // создает ссылку для файла на гугл диске
@@ -378,298 +491,335 @@ async function getShareableFolderLink(fileId) {
 }
 
 bot.callbackQuery("saveAndSend", async (ctx) => {
-  const session = ctx.session;
+  try {
+    const session = ctx.session;
 
-  ctx.answerCallbackQuery();
-  ctx.reply("💽 сохраняем информацию, это может занять какое-то время");
-  if (session.formData.files && session.formData.files.length > 0) {
-    try {
-      const newFolderId = await uploadFilesToNewFolder(
-        session.formData.name,
-        session.formData.files
-      );
-      for (const file of session.formData.files) {
-        try {
-          fs.unlink(file.filePath, (err) => {
-            if (err) {
-              console.error(`Error deleting file ${file.filePath}:`, err);
-            } else {
-              console.log(`Deleted local file ${file.filePath}`);
-            }
-          });
-        } catch (error) {
-          console.error(
-            `Failed to upload or delete file ${file.fileName}:`,
-            error
-          );
+    ctx.answerCallbackQuery();
+    ctx.reply("💽 сохраняем информацию, это может занять какое-то время");
+    if (session.formData.files && session.formData.files.length > 0) {
+      try {
+        const newFolderId = await uploadFilesToNewFolder(
+          session.formData.name,
+          session.formData.files
+        );
+        for (const file of session.formData.files) {
+          try {
+            fs.unlink(file.filePath, (err) => {
+              if (err) {
+                console.error(`Error deleting file ${file.filePath}:`, err);
+              } else {
+                console.log(`Deleted local file ${file.filePath}`);
+              }
+            });
+          } catch (error) {
+            console.error(
+              `Failed to upload or delete file ${file.fileName}:`,
+              error
+            );
+          }
         }
-      }
-      const shareableLink = await getShareableFolderLink(newFolderId);
+        const shareableLink = await getShareableFolderLink(newFolderId);
 
-      const values = [];
-      for (let key in session.formData) {
-        if (key === "username") {
-          const userProfileLink = session.formData.username
-            ? `=HYPERLINK("https://t.me/${session.formData.username}")`
-            : "No username";
-          values.push(userProfileLink);
-        } else if (key !== "files") {
-          values.push(session.formData[key]);
-        } else {
-          values.push(`=HYPERLINK("${shareableLink}")`);
+        const values = [];
+        for (let key in session.formData) {
+          if (key === "username") {
+            const userProfileLink = session.formData.username
+              ? `=HYPERLINK("https://t.me/${session.formData.username}")`
+              : "No username";
+            values.push(userProfileLink);
+          } else if (key !== "files") {
+            values.push(session.formData[key]);
+          } else {
+            values.push(`=HYPERLINK("${shareableLink}")`);
+          }
         }
-      }
-      await appendToSheet(values);
-      session.step = "finalStep";
-      const keyboard = new InlineKeyboard()
-        .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
-        .row()
-        .text("Купить Численничек 2023", "buy");
-      ctx.reply(
-        "<b>Готово! Спасибо за заявку, ответим в начале ноября</b>",
-        {
+        await appendToSheet(values);
+        session.step = "finalStep";
+        const keyboard = new InlineKeyboard()
+          .url("Телеграм канал collective(ism)", "https://t.me/collective_ism")
+          .row()
+          .text("Купить Численничек 2023", "buy");
+        ctx.reply("<b>Готово! Спасибо за заявку, ответим в начале ноября</b>", {
           parse_mode: "HTML",
           reply_markup: keyboard,
-        }
-      );
-    } catch (error) {
-      // console.error(`Failed to upload sheet`, error);
-      console.error(`Failed to upload sheet`);
+        });
+      } catch (error) {
+        // console.error(`Failed to upload sheet`, error);
+        console.error(`Failed to upload sheet`);
+      }
+      session.step = "finalStep";
+    } else {
+      ctx.reply("Вы не загрузили ни одного файла.");
     }
-    session.step = "finalStep";
-  } else {
-    ctx.reply("Вы не загрузили ни одного файла.");
+  } catch (error) {
+    console.log(error);
   }
 });
 
 async function showEditMenu(ctx) {
-  const keyboard = new InlineKeyboard()
-    .text("Имя", "editBio")
-    .text("Ссылка на соцсеть", "editSocialMedia")
-    .row()
-    .text("Название", "editNameOfArt")
-    .text("Описание", "editDesc")
-    .row()
-    .text("Загрузить файлы заново", "editFiles")
-    .row()
-    .text("Сохранить и отправить", "saveAndSend");
-  const allInfo = `Имя: ${ctx.session.formData.name}\nСсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание: ${ctx.session.formData.description}\nЗагружено файлов: ${ctx.session.formData.files.length}`;
-  await ctx.reply(`${allInfo}\n\n Выберите, что нужно отредактировать:`, {
-    reply_markup: keyboard,
-  });
+  try {
+    const keyboard = new InlineKeyboard()
+      .text("Имя", "editBio")
+      .text("Ссылка на соцсеть", "editSocialMedia")
+      .row()
+      .text("Название", "editNameOfArt")
+      .text("Описание", "editDesc")
+      .row()
+      .text("Загрузить файлы заново", "editFiles")
+      .row()
+      .text("Сохранить и отправить", "saveAndSend");
+    const allInfo = `Имя: ${ctx.session.formData.name}\nСсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание: ${ctx.session.formData.description}\nЗагружено файлов: ${ctx.session.formData.files.length}`;
+    await ctx.reply(`${allInfo}\n\n Выберите, что нужно отредактировать:`, {
+      reply_markup: keyboard,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 bot.callbackQuery("edit", async (ctx) => {
-  ctx.answerCallbackQuery();
-  await showEditMenu(ctx);
+  try {
+    ctx.answerCallbackQuery();
+    await showEditMenu(ctx);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("editBio", async (ctx) => {
-  ctx.session.step = "bioInfo";
-  ctx.reply("Как вас зовут?");
+  try {
+    ctx.session.step = "bioInfo";
+    ctx.reply("Как вас зовут?");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("editSocialMedia", async (ctx) => {
-  ctx.session.step = "socialMedia";
-  ctx.reply("Ссылка на ваши социальные сети");
+  try {
+    ctx.session.step = "socialMedia";
+    ctx.reply("Ссылка на ваши социальные сети");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("editNameOfAr", (ctx) => {
-  ctx.session.step = "nameOfArt";
-  ctx.reply("Название работы");
+  try {
+    ctx.session.step = "nameOfArt";
+    ctx.reply("Название работы");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("editDesc", async (ctx) => {
-  ctx.session.step = "collectDescription";
-  ctx.reply("Описание работы");
+  try {
+    ctx.session.step = "collectDescription";
+    ctx.reply("Описание работы");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("editFiles", async (ctx) => {
-  ctx.session.step = "collectFile";
-  ctx.session.formData.files = [];
-  ctx.reply("Отправьте до 10 файлов с вашей работой.");
+  try {
+    ctx.session.step = "collectFile";
+    ctx.session.formData.files = [];
+    ctx.reply("Отправьте до 10 файлов с вашей работой.");
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.callbackQuery("confirmSubmission", async (ctx) => {
-  const session = ctx.session;
+  try {
+    const session = ctx.session;
 
-  ctx.answerCallbackQuery();
-  if (session.formData.files && session.formData.files.length > 0) {
-    await ctx.reply("Файлы были успешно сохранены");
-    const keyboard = new InlineKeyboard()
-      .text("Редактировать", "edit")
-      .text("Сохранить и отправить", "saveAndSend");
-    const allInfo = `Имя: ${session.formData.name}\nсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\nНажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
-    ctx.reply(allInfo, {
-      reply_markup: keyboard,
-    });
-  } else {
-    ctx.reply("Вы не загрузили ни одного файла.");
-    session.step = "collectFile";
+    ctx.answerCallbackQuery();
+    if (session.formData.files && session.formData.files.length > 0) {
+      await ctx.reply("Файлы были успешно сохранены");
+      const keyboard = new InlineKeyboard()
+        .text("Редактировать", "edit")
+        .text("Сохранить и отправить", "saveAndSend");
+      const allInfo = `Имя: ${session.formData.name}\nсылка на соцсеть: ${ctx.session.formData.socialMedia}\nНазвание работы: ${ctx.session.formData.nameofart}\nОписание работы: ${session.formData.description}\nЗагружено файлов: ${session.formData.files.length} \n\nНажимая отправить вы соглашаетесь на предоставление информации организаторам опенколла.`;
+      ctx.reply(allInfo, {
+        reply_markup: keyboard,
+      });
+    } else {
+      ctx.reply("Вы не загрузили ни одного файла.");
+      session.step = "collectFile";
+    }
+  } catch (error) {
+    console.log(error);
   }
 });
 
 bot.on("message", async (ctx) => {
-  const session = ctx.session;
+  try {
+    const session = ctx.session;
 
-  // logic for buying
-  if (session.step === "payment") {
-    await paymentStep(ctx);
-  } else if (session.step === "amount") {
-    ctx.session.amount = ctx.message.text;
-    const keyboard = new InlineKeyboard()
-      .text("Курьером (по Москве) — 500р.", "curier")
-      .row()
-      .text("Почта России — 400р.", "post")
-      .row()
-      .text("Самовывоз (метро ул. 1905 года)", "pickup");
+    // logic for buying
+    if (session.step === "payment") {
+      await paymentStep(ctx);
+    } else if (session.step === "amount") {
+      ctx.session.amount = ctx.message.text;
+      const keyboard = new InlineKeyboard()
+        .text("Курьером (по Москве) — 500р.", "curier")
+        .row()
+        .text("Почта России — 400р.", "post")
+        .row()
+        .text("Самовывоз (метро ул. 1905 года)", "pickup");
 
-    await ctx.reply("Выберите способ доставки👇", {
-      reply_markup: keyboard,
-    });
-  } else if (session.step === "delivery") {
-    session.deliveryData = ctx.msg.text;
-    await ctx.reply("<b>Спасибо, мы сохранили информацию о доставке</b>", {
-      parse_mode: "HTML",
-    });
-    valueStep(ctx);
-  }
-
-  //logic for open call
-  if (session.step === "bioInfo") {
-    session.formData.name = ctx.message.text;
-    session.formData.username = ctx.message.from.username;
-    if (!session.formData.socialMedia) {
-      ctx.reply("Пришлите ссылку на вашу соцсеть");
-      session.step = "socialMedia";
-    } else {
-      showEditMenu(ctx);
-    }
-  } else if (session.step === "socialMedia") {
-    session.formData.socialMedia = ctx.message.text;
-    if (!session.formData.nameofart) {
-      ctx.reply("Название работы");
-      session.step = "nameOfArt";
-    } else {
-      showEditMenu(ctx);
-    }
-  } else if (session.step === "nameOfArt") {
-    session.formData.nameofart = ctx.message.text;
-    if (!session.formData.description) {
-      ctx.reply("Описание");
-      session.step = "collectDescription";
-    } else {
-      showEditMenu(ctx);
-    }
-  } else if (session.step === "collectDescription") {
-    session.formData.description = ctx.message.text;
-    if (!session.formData.files) {
-      ctx.reply("Отправьте до 10 файлов с вашей работой.");
-      session.step = "collectFile";
-    } else {
-      showEditMenu(ctx);
-    }
-  } else if (session.step === "collectFile") {
-    const keyboard = new InlineKeyboard().text("Готово", "confirmSubmission");
-
-    if (!session.formData.files) {
-      session.formData.files = [];
+      await ctx.reply("Выберите способ доставки👇", {
+        reply_markup: keyboard,
+      });
+    } else if (session.step === "delivery") {
+      session.deliveryData = ctx.msg.text;
+      await ctx.reply("<b>Спасибо, мы сохранили информацию о доставке</b>", {
+        parse_mode: "HTML",
+      });
+      valueStep(ctx);
     }
 
-    if (!session.mediaGroupTimeout) {
-      session.mediaGroupTimeout = null;
-    }
-
-    const files = [];
-
-    try {
-      if (ctx.message.document) {
-        files.push(ctx.message.document);
-      } else if (ctx.message.photo) {
-        files.push(ctx.message.photo[ctx.message.photo.length - 1]);
-      } else if (ctx.message.video) {
-        files.push(ctx.message.video);
-      } else if (ctx.message.audio) {
-        files.push(ctx.message.audio);
-      } else if (ctx.message.voice) {
-        files.push(ctx.message.voice);
+    //logic for open call
+    if (session.step === "bioInfo") {
+      session.formData.name = ctx.message.text;
+      session.formData.username = ctx.message.from.username;
+      if (!session.formData.socialMedia) {
+        ctx.reply("Пришлите ссылку на вашу соцсеть");
+        session.step = "socialMedia";
       } else {
-        // Unsupported file type
-        throw new Error("Unsupported file format.");
+        showEditMenu(ctx);
+      }
+    } else if (session.step === "socialMedia") {
+      session.formData.socialMedia = ctx.message.text;
+      if (!session.formData.nameofart) {
+        ctx.reply("Название работы");
+        session.step = "nameOfArt";
+      } else {
+        showEditMenu(ctx);
+      }
+    } else if (session.step === "nameOfArt") {
+      session.formData.nameofart = ctx.message.text;
+      if (!session.formData.description) {
+        ctx.reply("Описание");
+        session.step = "collectDescription";
+      } else {
+        showEditMenu(ctx);
+      }
+    } else if (session.step === "collectDescription") {
+      session.formData.description = ctx.message.text;
+      if (!session.formData.files) {
+        ctx.reply("Отправьте до 10 файлов с вашей работой.");
+        session.step = "collectFile";
+      } else {
+        showEditMenu(ctx);
+      }
+    } else if (session.step === "collectFile") {
+      const keyboard = new InlineKeyboard().text("Готово", "confirmSubmission");
+
+      if (!session.formData.files) {
+        session.formData.files = [];
       }
 
-      for (const fileObject of files) {
-        const fileId = fileObject.file_id;
-        const file = await ctx.api.getFile(fileId);
-        const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-        const fileName = ctx.message.document
-          ? ctx.message.document.file_name
-          : ctx.message.photo
-          ? `photo_${Date.now()}.jpg`
-          : ctx.message.video
-          ? `video_${Date.now()}.mp4`
-          : ctx.message.audio
-          ? `audio_${Date.now()}.mp3`
-          : ctx.message.voice
-          ? `voice_${Date.now()}.ogg`
-          : `file_${Date.now()}`;
-
-        const filePath = path.join(__dirname, fileName);
-
-        const response = await axios({
-          url: fileUrl,
-          method: "GET",
-          responseType: "stream",
-        });
-
-        response.data.pipe(fs.createWriteStream(filePath));
-        await new Promise((resolve) => response.data.on("end", resolve));
-
-        session.formData.files.push({
-          filePath: filePath,
-          fileName: fileName,
-        });
-
-        if (session.formData.files.length >= 10) {
-          ctx.reply("Вы загрузили максимальное количество файлов", {
-            reply_markup: keyboard,
-          });
-          return;
-        }
-      }
-
-      // Clear any existing timeout to wait for more files
-      if (session.mediaGroupTimeout) {
-        clearTimeout(session.mediaGroupTimeout);
-      }
-
-      // Set a timeout to detect when no more files are arriving
-      session.mediaGroupTimeout = setTimeout(async () => {
-        ctx.reply(
-          `Вы загрузили ${session.formData.files.length} файл${
-            parseInt(session.formData.files.length) === 1
-              ? ""
-              : [2, 3, 4].includes(parseInt(session.formData.files.length))
-              ? "a"
-              : "ов"
-          }. Вы можете отправить еще ${10 - session.formData.files.length}.`,
-          {
-            reply_markup: keyboard,
-          }
-        );
+      if (!session.mediaGroupTimeout) {
         session.mediaGroupTimeout = null;
-      }, 1000);
-    } catch (error) {
-      console.error("Error processing files:", error.message);
-      ctx.reply(
-        "Произошла ошибка при загрузке. Пожалуйста, отправьте файл в поддерживаемом формате."
-      );
-    }
-  }
+      }
 
-  // if (session.step === "finalStep") {
-  //   ctx.reply("Спасибо за заявку, ответим в первой неделе ноября");
-  // }
+      const files = [];
+
+      try {
+        if (ctx.message.document) {
+          files.push(ctx.message.document);
+        } else if (ctx.message.photo) {
+          files.push(ctx.message.photo[ctx.message.photo.length - 1]);
+        } else if (ctx.message.video) {
+          files.push(ctx.message.video);
+        } else if (ctx.message.audio) {
+          files.push(ctx.message.audio);
+        } else if (ctx.message.voice) {
+          files.push(ctx.message.voice);
+        } else {
+          // Unsupported file type
+          throw new Error("Unsupported file format.");
+        }
+
+        for (const fileObject of files) {
+          const fileId = fileObject.file_id;
+          const file = await ctx.api.getFile(fileId);
+          const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+          const fileName = ctx.message.document
+            ? ctx.message.document.file_name
+            : ctx.message.photo
+            ? `photo_${Date.now()}.jpg`
+            : ctx.message.video
+            ? `video_${Date.now()}.mp4`
+            : ctx.message.audio
+            ? `audio_${Date.now()}.mp3`
+            : ctx.message.voice
+            ? `voice_${Date.now()}.ogg`
+            : `file_${Date.now()}`;
+
+          const filePath = path.join(__dirname, fileName);
+
+          const response = await axios({
+            url: fileUrl,
+            method: "GET",
+            responseType: "stream",
+          });
+
+          response.data.pipe(fs.createWriteStream(filePath));
+          await new Promise((resolve) => response.data.on("end", resolve));
+
+          session.formData.files.push({
+            filePath: filePath,
+            fileName: fileName,
+          });
+
+          if (session.formData.files.length >= 10) {
+            ctx.reply("Вы загрузили максимальное количество файлов", {
+              reply_markup: keyboard,
+            });
+            return;
+          }
+        }
+
+        // Clear any existing timeout to wait for more files
+        if (session.mediaGroupTimeout) {
+          clearTimeout(session.mediaGroupTimeout);
+        }
+
+        // Set a timeout to detect when no more files are arriving
+        session.mediaGroupTimeout = setTimeout(async () => {
+          ctx.reply(
+            `Вы загрузили ${session.formData.files.length} файл${
+              parseInt(session.formData.files.length) === 1
+                ? ""
+                : [2, 3, 4].includes(parseInt(session.formData.files.length))
+                ? "a"
+                : "ов"
+            }. Вы можете отправить еще ${10 - session.formData.files.length}.`,
+            {
+              reply_markup: keyboard,
+            }
+          );
+          session.mediaGroupTimeout = null;
+        }, 1000);
+      } catch (error) {
+        console.error("Error processing files:", error.message);
+        ctx.reply(
+          "Произошла ошибка при загрузке. Пожалуйста, отправьте файл в поддерживаемом формате."
+        );
+      }
+    }
+
+    // if (session.step === "finalStep") {
+    //   ctx.reply("Спасибо за заявку, ответим в первой неделе ноября");
+    // }
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 bot.start();
